@@ -15,7 +15,6 @@ interface ResultModalProps {
   score: number;
   onTryAgain: () => void;
   onNextTarget: () => void;
-  onContinueMixing?: () => void;
 }
 
 export function ResultModal({
@@ -27,7 +26,6 @@ export function ResultModal({
   score,
   onTryAgain,
   onNextTarget,
-  onContinueMixing,
 }: ResultModalProps) {
   const targetHex = rgbToHex(targetColor);
   const mixedHex = rgbToHex(mixedColor);
@@ -99,16 +97,14 @@ export function ResultModal({
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            {onContinueMixing && (
-              <Button
-                onClick={onContinueMixing}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
-                data-testid="button-continue-mixing"
-              >
-                <PaintBucket className="w-4 h-4 mr-2" />
-                Continue Adding More Paint
-              </Button>
-            )}
+            <Button
+              onClick={onClose}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
+              data-testid="button-continue-mixing"
+            >
+              <PaintBucket className="w-4 h-4 mr-2" />
+              Continue Adding More Paint
+            </Button>
             <Button
               onClick={onTryAgain}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"

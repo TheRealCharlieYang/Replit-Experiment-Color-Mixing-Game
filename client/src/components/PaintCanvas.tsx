@@ -28,18 +28,13 @@ export default function PaintCanvas({ gameState, selectedPigment, brushSize, onA
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (gameState.phase === 'painting') {
-      // Render all strokes
-      renderStrokes(ctx, gameState.strokes);
-    } else if (gameState.phase === 'mixed' && gameState.mixed) {
-      // Show mixed pile
-      renderMixedPile(ctx, gameState.mixed, gameState.totalAmount, canvas.width, canvas.height);
-    }
+    // Always render all strokes - no mixed pile display
+    renderStrokes(ctx, gameState.strokes);
   }, [gameState.strokes, gameState.phase, gameState.mixed, gameState.totalAmount]);
 
   // Handle mouse/pointer events
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (!selectedPigment || gameState.phase !== 'painting') return;
+    if (!selectedPigment) return;
     
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -76,7 +71,7 @@ export default function PaintCanvas({ gameState, selectedPigment, brushSize, onA
     }
 
     // Continue stroke if drawing
-    if (isDrawing && currentStroke && selectedPigment && gameState.phase === 'painting') {
+    if (isDrawing && currentStroke && selectedPigment) {
       const newPoint = { x, y, t: Date.now() };
       const updatedStroke = {
         ...currentStroke,
@@ -181,8 +176,7 @@ export default function PaintCanvas({ gameState, selectedPigment, brushSize, onA
         </div>
         <div className="text-xs text-warm-gray-500">
           <span data-testid="canvas-status">
-            {gameState.phase === 'painting' ? 'Ready to paint' : 
-             gameState.phase === 'mixed' ? 'Colors mixed' : 'Review results'}
+            Ready to paint
           </span>
         </div>
       </div>

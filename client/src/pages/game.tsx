@@ -32,10 +32,6 @@ export default function GamePage() {
     clearCanvas();
   };
 
-  const handleContinueMixing = () => {
-    setShowResultModal(false);
-    // Keep canvas as is, allow user to continue adding paint and re-mix
-  };
 
   const handleNextTarget = () => {
     setShowResultModal(false);
@@ -114,7 +110,6 @@ export default function GamePage() {
           score={gameState.score || 0}
           onTryAgain={handleTryAgain}
           onNextTarget={handleNextTarget}
-          onContinueMixing={handleContinueMixing}
         />
       )}
     </div>

@@ -347,46 +347,6 @@ export function renderMixedPile(
   mixedColor: { r: number; g: number; b: number },
   totalAmount: number
 ): void {
-  if (totalAmount <= 0) return;
-  
-  const pileRadius = calculatePileSize(totalAmount);
-  const centerX = canvas.width * 0.8; // Position pile in bottom right
-  const centerY = canvas.height * 0.8;
-  
-  ctx.save();
-  
-  // Create gradient for realistic paint pile appearance
-  const gradient = ctx.createRadialGradient(
-    centerX - pileRadius * 0.3, centerY - pileRadius * 0.3, 0,
-    centerX, centerY, pileRadius
-  );
-  
-  const rgb = `rgb(${Math.round(mixedColor.r)}, ${Math.round(mixedColor.g)}, ${Math.round(mixedColor.b)})`;
-  const highlight = `rgb(${Math.min(255, Math.round(mixedColor.r * 1.2))}, ${Math.min(255, Math.round(mixedColor.g * 1.2))}, ${Math.min(255, Math.round(mixedColor.b * 1.2))})`;
-  const shadow = `rgb(${Math.round(mixedColor.r * 0.7)}, ${Math.round(mixedColor.g * 0.7)}, ${Math.round(mixedColor.b * 0.7)})`;
-  
-  gradient.addColorStop(0, highlight);
-  gradient.addColorStop(0.6, rgb);
-  gradient.addColorStop(1, shadow);
-  
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, pileRadius, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Add shine effect
-  ctx.fillStyle = `rgba(255, 255, 255, 0.3)`;
-  ctx.beginPath();
-  ctx.ellipse(
-    centerX - pileRadius * 0.3,
-    centerY - pileRadius * 0.3,
-    pileRadius * 0.4,
-    pileRadius * 0.2,
-    -Math.PI / 6,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-  
-  ctx.restore();
+  // Mixed pile rendering removed - no longer showing mixed color pile on canvas
+  return;
 }

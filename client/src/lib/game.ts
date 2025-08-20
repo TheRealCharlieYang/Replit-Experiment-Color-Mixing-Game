@@ -189,7 +189,7 @@ export function mixColors(state: GameState, pigments: Pigment[]): GameState {
   return {
     ...state,
     mixed: mixedRgb,
-    phase: "review", // Change to review phase to show continue option
+    phase: "painting", // Keep in painting phase to allow continuous painting
     score,
   };
 }
