@@ -49,16 +49,20 @@ export function okLabToLinearRgb({ L, a, b }: OKLab): RGB {
   const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
   const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
 
-  // LMS' to LMS
-  const l = l_ * l_ * l_;
-  const m = m_ * m_ * m_;
-  const s = s_ * s_ * s_;
+  // LMS' to LMS (ensure positive values before cubing)
+  const l = Math.max(0, l_) ** 3;
+  const m = Math.max(0, m_) ** 3;
+  const s = Math.max(0, s_) ** 3;
 
   // LMS to Linear RGB
+  const red = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const green = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const blue = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+  
   return {
-    r: +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    b: -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+    r: Math.max(0, Math.min(1, red)),
+    g: Math.max(0, Math.min(1, green)),
+    b: Math.max(0, Math.min(1, blue)),
   };
 }
 
@@ -76,20 +80,23 @@ export function mixColorsOKLab(colors: { color: OKLab; weight: number }[]): OKLa
   const totalWeight = colors.reduce((sum, c) => sum + c.weight, 0);
   if (totalWeight === 0) return { L: 1, a: 0, b: 0 };
 
-  // Weighted average
+  // Weighted average in OKLab space
   const mixedL = colors.reduce((sum, c) => sum + c.color.L * c.weight, 0) / totalWeight;
   const mixedA = colors.reduce((sum, c) => sum + c.color.a * c.weight, 0) / totalWeight;
   const mixedB = colors.reduce((sum, c) => sum + c.color.b * c.weight, 0) / totalWeight;
 
-  // Apply subtractive darkening curve based on total amount
-  const darkeningFactor = 0.35;
-  const loadFactor = Math.min(totalWeight / 10, 1); // Normalize to reasonable range
-  const adjustedL = mixedL * (1 - darkeningFactor * (1 - Math.exp(-loadFactor * 2)));
+  // Improved subtractive mixing with better darkening behavior
+  const numColors = colors.filter(c => c.weight > 0).length;
+  const complexity = Math.min(numColors / 3, 1); // More colors = more complex mixing
+  const darkeningFactor = 0.15 + complexity * 0.15; // Variable darkening based on complexity
+  
+  // Apply subtractive darkening
+  const adjustedL = mixedL * (1 - darkeningFactor);
 
   return {
-    L: Math.max(0, adjustedL),
-    a: mixedA,
-    b: mixedB,
+    L: Math.max(0.05, Math.min(1, adjustedL)), // Prevent pure black and pure white
+    a: Math.max(-0.5, Math.min(0.5, mixedA)), // Clamp chroma values
+    b: Math.max(-0.5, Math.min(0.5, mixedB)),
   };
 }
 

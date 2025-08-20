@@ -1,79 +1,26 @@
 import type { GameState, Pigment, RGB, SessionStats, MatchResult, MatchHistory } from "@shared/schema";
-import { rgbToOKLab, mixColorsOKLab, okLabToRgb, calculateColorScore, rgbToHex } from "./color";
+import { rgbToOKLab, mixColorsOKLab, okLabToRgb, calculateColorScore, rgbToHex, hexToRgb } from "./color";
 import { nanoid } from "nanoid";
 
 // Default pigments based on classic oil paint colors
+// Function to convert hex to proper OKLab colorant values
+function createPigment(id: string, name: string, code: string, swatchHex: string): Pigment {
+  const rgb = hexToRgb(swatchHex);
+  const colorant = rgbToOKLab(rgb);
+  return { id, name, code, swatchHex, colorant };
+}
+
 export const DEFAULT_PIGMENTS: Pigment[] = [
-  {
-    id: "pw6",
-    name: "Titanium White",
-    code: "PW6",
-    swatchHex: "#F2F2F2",
-    colorant: { L: 0.97, a: 0.00, b: 0.00 },
-  },
-  {
-    id: "pbk9",
-    name: "Ivory Black",
-    code: "PBk9",
-    swatchHex: "#1C1C1C",
-    colorant: { L: 0.15, a: 0.00, b: 0.00 },
-  },
-  {
-    id: "py35",
-    name: "Cadmium Yellow",
-    code: "PY35",
-    swatchHex: "#F6C700",
-    colorant: { L: 0.85, a: 0.15, b: 0.35 },
-  },
-  {
-    id: "py43",
-    name: "Yellow Ochre",
-    code: "PY43",
-    swatchHex: "#C49A2C",
-    colorant: { L: 0.70, a: 0.10, b: 0.25 },
-  },
-  {
-    id: "pr108",
-    name: "Cadmium Red",
-    code: "PR108",
-    swatchHex: "#D02A2A",
-    colorant: { L: 0.60, a: 0.45, b: 0.35 },
-  },
-  {
-    id: "pr177",
-    name: "Alizarin Crimson",
-    code: "PR177",
-    swatchHex: "#8E1F2E",
-    colorant: { L: 0.40, a: 0.35, b: 0.15 },
-  },
-  {
-    id: "pb29",
-    name: "Ultramarine Blue",
-    code: "PB29",
-    swatchHex: "#2C3FA3",
-    colorant: { L: 0.45, a: 0.05, b: -0.40 },
-  },
-  {
-    id: "pb15",
-    name: "Phthalo Blue",
-    code: "PB15",
-    swatchHex: "#0C4DA2",
-    colorant: { L: 0.40, a: -0.10, b: -0.45 },
-  },
-  {
-    id: "pg7",
-    name: "Phthalo Green",
-    code: "PG7",
-    swatchHex: "#0C8A6D",
-    colorant: { L: 0.55, a: -0.35, b: 0.10 },
-  },
-  {
-    id: "pbr7",
-    name: "Burnt Sienna",
-    code: "PBr7",
-    swatchHex: "#7A3B1C",
-    colorant: { L: 0.35, a: 0.25, b: 0.30 },
-  },
+  createPigment("pw6", "Titanium White", "PW6", "#F2F2F2"),
+  createPigment("pbk9", "Ivory Black", "PBk9", "#1C1C1C"),
+  createPigment("py35", "Cadmium Yellow", "PY35", "#F6C700"),
+  createPigment("py43", "Yellow Ochre", "PY43", "#C49A2C"),
+  createPigment("pr108", "Cadmium Red", "PR108", "#D02A2A"),
+  createPigment("pr177", "Alizarin Crimson", "PR177", "#8E1F2E"),
+  createPigment("pb29", "Ultramarine Blue", "PB29", "#2C3FA3"),
+  createPigment("pb15", "Phthalo Blue", "PB15", "#0C4DA2"),
+  createPigment("pg7", "Phthalo Green", "PG7", "#0C8A6D"),
+  createPigment("pbr7", "Burnt Sienna", "PBr7", "#7A3B1C"),
 ];
 
 // Predefined target colors with names
@@ -191,6 +138,7 @@ export function mixColors(state: GameState, pigments: Pigment[]): GameState {
     mixed: mixedRgb,
     phase: "mixed",
     score,
+    // Keep canvas in painting mode so user can continue adding paint
   };
 }
 

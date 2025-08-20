@@ -114,20 +114,24 @@ export function GameCanvas({
     setBrushPreview(prev => ({ ...prev, visible: false }));
   }, []);
 
-  // Render mixed color pile
+  // Render fixed-size mixed color pile in center
   const renderMixedPile = () => {
-    if (phase !== "mixed" || !mixedColor) return null;
+    if (!mixedColor) return null;
 
-    const pileSize = calculatePileSize(totalAmount);
     const pileColor = rgbToHex(mixedColor);
+    const pileSize = 80; // Fixed size
 
     return (
       <div
-        className="mixed-pile"
+        className="absolute mixed-pile rounded-full shadow-lg border-2 border-white"
         style={{
           width: `${pileSize}px`,
           height: `${pileSize}px`,
           backgroundColor: pileColor,
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.3)",
         }}
         data-testid="mixed-color-pile"
       />
@@ -135,10 +139,10 @@ export function GameCanvas({
   };
 
   return (
-    <div className="relative w-full h-full canvas-container">
+    <div className="relative w-full h-full canvas-container bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-inner">
       <canvas
         ref={canvasRef}
-        className="paint-canvas w-full h-full"
+        className="paint-canvas w-full h-full rounded-lg"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

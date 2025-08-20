@@ -29,7 +29,7 @@ export default function GamePage() {
 
   const handleTryAgain = () => {
     setShowResultModal(false);
-    clearCanvas();
+    // Don't clear canvas - allow user to continue mixing
   };
 
   const handleNextTarget = () => {

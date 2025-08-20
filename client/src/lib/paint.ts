@@ -70,7 +70,7 @@ export function continueStroke(
   
   const lastPoint = engine.currentStroke.points[engine.currentStroke.points.length - 1];
   
-  // Calculate segment length
+  // Calculate segment length and distance
   const segmentLength = Math.sqrt(
     Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2)
   );
@@ -78,8 +78,8 @@ export function continueStroke(
   engine.currentStroke.points.push(newPoint);
   engine.currentStroke.length += segmentLength;
   
-  // Draw paint squirt at each point instead of lines
-  drawPaintSquirt(engine, x, y, pressure);
+  // Draw continuous thick brush stroke with tapered ends
+  drawThickBrushStroke(engine, lastPoint, newPoint);
 }
 
 export function endStroke(engine: PaintEngine): Stroke | null {
@@ -117,26 +117,35 @@ export function drawPaintSquirt(engine: PaintEngine, x: number, y: number, press
   
   engine.ctx.save();
   
-  // Create paint blob with irregular edges like squeezed paint
-  const numBlobs = Math.floor(pressure * 3) + 2;
+  // Draw shadow first (offset slightly)
+  engine.ctx.globalAlpha = 0.3;
+  engine.ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+  engine.ctx.beginPath();
+  engine.ctx.arc(x + 2, y + 2, paintAmount, 0, Math.PI * 2);
+  engine.ctx.fill();
   
-  for (let i = 0; i < numBlobs; i++) {
-    const angle = (i / numBlobs) * Math.PI * 2;
-    const variance = (Math.random() - 0.5) * 0.3;
-    const blobRadius = paintAmount * (0.7 + variance);
-    const offsetX = Math.cos(angle) * blobRadius * 0.2;
-    const offsetY = Math.sin(angle) * blobRadius * 0.2;
-    
-    engine.ctx.globalAlpha = 0.6 + (Math.random() * 0.3);
-    engine.ctx.fillStyle = engine.activePigment.swatchHex;
-    engine.ctx.beginPath();
-    engine.ctx.arc(x + offsetX, y + offsetY, blobRadius, 0, Math.PI * 2);
-    engine.ctx.fill();
-  }
+  // Draw main paint blob with 3D effect
+  const gradient = engine.ctx.createRadialGradient(
+    x - paintAmount * 0.3, y - paintAmount * 0.3, 0,
+    x, y, paintAmount
+  );
   
-  // Add main central blob
+  // Parse hex color and create highlight/shadow variations
+  const hex = engine.activePigment.swatchHex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  
+  const highlight = `rgb(${Math.min(255, r + 40)}, ${Math.min(255, g + 40)}, ${Math.min(255, b + 40)})`;
+  const base = `rgb(${r}, ${g}, ${b})`;
+  const shadow = `rgb(${Math.max(0, r - 30)}, ${Math.max(0, g - 30)}, ${Math.max(0, b - 30)})`;
+  
+  gradient.addColorStop(0, highlight);
+  gradient.addColorStop(0.6, base);
+  gradient.addColorStop(1, shadow);
+  
   engine.ctx.globalAlpha = 0.9;
-  engine.ctx.fillStyle = engine.activePigment.swatchHex;
+  engine.ctx.fillStyle = gradient;
   engine.ctx.beginPath();
   engine.ctx.arc(x, y, paintAmount, 0, Math.PI * 2);
   engine.ctx.fill();
@@ -169,6 +178,56 @@ function drawLineSegment(engine: PaintEngine, from: StrokePoint, to: StrokePoint
   engine.ctx.restore();
 }
 
+function drawThickBrushStroke(engine: PaintEngine, from: StrokePoint, to: StrokePoint): void {
+  const distance = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
+  if (distance < 1) return; // Skip very short segments
+  
+  engine.ctx.save();
+  
+  // Create thick brush stroke with shadow
+  const baseWidth = engine.brushSize;
+  const fromPressure = from.pressure || 1;
+  const toPressure = to.pressure || 1;
+  
+  // Draw shadow first
+  engine.ctx.globalAlpha = 0.3;
+  engine.ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+  engine.ctx.lineWidth = baseWidth * Math.max(fromPressure, toPressure);
+  engine.ctx.lineCap = "round";
+  engine.ctx.lineJoin = "round";
+  engine.ctx.beginPath();
+  engine.ctx.moveTo(from.x + 2, from.y + 2);
+  engine.ctx.lineTo(to.x + 2, to.y + 2);
+  engine.ctx.stroke();
+  
+  // Draw main stroke with gradient
+  const gradient = engine.ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+  
+  const hex = engine.activePigment.swatchHex;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  
+  const highlight = `rgba(${Math.min(255, r + 30)}, ${Math.min(255, g + 30)}, ${Math.min(255, b + 30)}, 0.9)`;
+  const base = `rgba(${r}, ${g}, ${b}, 0.85)`;
+  
+  gradient.addColorStop(0, highlight);
+  gradient.addColorStop(0.5, base);
+  gradient.addColorStop(1, highlight);
+  
+  engine.ctx.globalAlpha = 0.9;
+  engine.ctx.strokeStyle = gradient;
+  engine.ctx.lineWidth = baseWidth * fromPressure;
+  engine.ctx.lineCap = "round";
+  engine.ctx.lineJoin = "round";
+  engine.ctx.beginPath();
+  engine.ctx.moveTo(from.x, from.y);
+  engine.ctx.lineTo(to.x, to.y);
+  engine.ctx.stroke();
+  
+  engine.ctx.restore();
+}
+
 export function redrawAllStrokes(engine: PaintEngine, strokes: Stroke[], allPigments: Pigment[]): void {
   engine.ctx.clearRect(0, 0, engine.canvas.width, engine.canvas.height);
   
@@ -182,7 +241,11 @@ export function redrawAllStrokes(engine: PaintEngine, strokes: Stroke[], allPigm
     engine.activePigment = pigment;
     
     stroke.points.forEach((point, index) => {
-      drawPaintSquirt(engine, point.x, point.y, point.pressure || 1);
+      if (index === 0) {
+        drawPaintSquirt(engine, point.x, point.y, point.pressure || 1);
+      } else {
+        drawThickBrushStroke(engine, stroke.points[index - 1], point);
+      }
     });
     
     engine.activePigment = oldPigment;
