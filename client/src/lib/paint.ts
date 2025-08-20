@@ -49,8 +49,8 @@ export function startStroke(
     amount: 0,
   };
   
-  // Draw initial dot
-  drawPoint(engine, x, y, pressure);
+  // Draw initial paint squirt
+  drawPaintSquirt(engine, x, y, pressure);
 }
 
 export function continueStroke(
@@ -78,8 +78,8 @@ export function continueStroke(
   engine.currentStroke.points.push(newPoint);
   engine.currentStroke.length += segmentLength;
   
-  // Draw line segment
-  drawLineSegment(engine, lastPoint, newPoint);
+  // Draw paint squirt at each point instead of lines
+  drawPaintSquirt(engine, x, y, pressure);
 }
 
 export function endStroke(engine: PaintEngine): Stroke | null {
@@ -108,14 +108,39 @@ export function endStroke(engine: PaintEngine): Stroke | null {
 }
 
 function drawPoint(engine: PaintEngine, x: number, y: number, pressure: number): void {
-  const radius = (engine.brushSize / 2) * pressure;
+  drawPaintSquirt(engine, x, y, pressure);
+}
+
+export function drawPaintSquirt(engine: PaintEngine, x: number, y: number, pressure: number): void {
+  const baseRadius = engine.brushSize / 2;
+  const paintAmount = baseRadius * pressure;
   
   engine.ctx.save();
-  engine.ctx.globalAlpha = 0.8;
+  
+  // Create paint blob with irregular edges like squeezed paint
+  const numBlobs = Math.floor(pressure * 3) + 2;
+  
+  for (let i = 0; i < numBlobs; i++) {
+    const angle = (i / numBlobs) * Math.PI * 2;
+    const variance = (Math.random() - 0.5) * 0.3;
+    const blobRadius = paintAmount * (0.7 + variance);
+    const offsetX = Math.cos(angle) * blobRadius * 0.2;
+    const offsetY = Math.sin(angle) * blobRadius * 0.2;
+    
+    engine.ctx.globalAlpha = 0.6 + (Math.random() * 0.3);
+    engine.ctx.fillStyle = engine.activePigment.swatchHex;
+    engine.ctx.beginPath();
+    engine.ctx.arc(x + offsetX, y + offsetY, blobRadius, 0, Math.PI * 2);
+    engine.ctx.fill();
+  }
+  
+  // Add main central blob
+  engine.ctx.globalAlpha = 0.9;
   engine.ctx.fillStyle = engine.activePigment.swatchHex;
   engine.ctx.beginPath();
-  engine.ctx.arc(x, y, radius, 0, Math.PI * 2);
+  engine.ctx.arc(x, y, paintAmount, 0, Math.PI * 2);
   engine.ctx.fill();
+  
   engine.ctx.restore();
 }
 
@@ -144,10 +169,10 @@ function drawLineSegment(engine: PaintEngine, from: StrokePoint, to: StrokePoint
   engine.ctx.restore();
 }
 
-export function redrawAllStrokes(engine: PaintEngine, strokes: Stroke[], pigments: Pigment[]): void {
+export function redrawAllStrokes(engine: PaintEngine, strokes: Stroke[], allPigments: Pigment[]): void {
   engine.ctx.clearRect(0, 0, engine.canvas.width, engine.canvas.height);
   
-  const pigmentMap = new Map(pigments.map(p => [p.id, p]));
+  const pigmentMap = new Map(allPigments.map(p => [p.id, p]));
   
   strokes.forEach(stroke => {
     const pigment = pigmentMap.get(stroke.pigmentId);
@@ -157,11 +182,7 @@ export function redrawAllStrokes(engine: PaintEngine, strokes: Stroke[], pigment
     engine.activePigment = pigment;
     
     stroke.points.forEach((point, index) => {
-      if (index === 0) {
-        drawPoint(engine, point.x, point.y, point.pressure || 1);
-      } else {
-        drawLineSegment(engine, stroke.points[index - 1], point);
-      }
+      drawPaintSquirt(engine, point.x, point.y, point.pressure || 1);
     });
     
     engine.activePigment = oldPigment;
@@ -180,14 +201,17 @@ export function getPointerPosition(
   event: React.PointerEvent | React.MouseEvent
 ): { x: number; y: number; pressure: number } {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
   
-  const x = (event.clientX - rect.left) * scaleX;
-  const y = (event.clientY - rect.top) * scaleY;
+  // Convert to canvas coordinates without device pixel ratio scaling
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
   const pressure = 'pressure' in event ? event.pressure || 1 : 1;
   
-  return { x, y, pressure };
+  // Clamp coordinates to canvas bounds
+  const clampedX = Math.max(0, Math.min(x, rect.width));
+  const clampedY = Math.max(0, Math.min(y, rect.height));
+  
+  return { x: clampedX, y: clampedY, pressure };
 }
 
 export function calculatePileSize(totalAmount: number): number {

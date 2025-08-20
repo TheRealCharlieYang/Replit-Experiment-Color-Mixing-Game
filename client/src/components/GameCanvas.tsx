@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import type { Pigment, Stroke } from "@shared/schema";
-import { createPaintEngine, startStroke, continueStroke, endStroke, redrawAllStrokes, getPointerPosition, calculatePileSize } from "../lib/paint";
+import { createPaintEngine, startStroke, continueStroke, endStroke, redrawAllStrokes, getPointerPosition, calculatePileSize, drawPaintSquirt } from "../lib/paint";
 import { rgbToHex } from "../lib/color";
 
 interface GameCanvasProps {
@@ -39,11 +39,10 @@ export function GameCanvas({
     engine.brushSize = brushSize;
     engineRef.current = engine;
 
-    // Set canvas size
+    // Set canvas size to match display size
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * window.devicePixelRatio;
-    canvas.height = rect.height * window.devicePixelRatio;
-    engine.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    canvas.width = rect.width;
+    canvas.height = rect.height;
     engine.ctx.imageSmoothingEnabled = true;
 
     return () => {
@@ -62,9 +61,12 @@ export function GameCanvas({
   // Redraw strokes when they change
   useEffect(() => {
     if (engineRef.current) {
-      redrawAllStrokes(engineRef.current, strokes, [activePigment]);
+      // Import all pigments to ensure we can redraw all strokes
+      import("../lib/game").then(({ DEFAULT_PIGMENTS }) => {
+        redrawAllStrokes(engineRef.current, strokes, DEFAULT_PIGMENTS);
+      });
     }
-  }, [strokes, activePigment]);
+  }, [strokes]);
 
   // Handle pointer events
   const handlePointerDown = useCallback((event: React.PointerEvent) => {
