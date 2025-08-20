@@ -1,0 +1,270 @@
+Color Mixing Game — Full Project Guide (Web, Netlify)
+
+This guide walks you from concept → MVP → polish for a browser game that tests players’ color‑mixing intuition using 10 classic oil‑paint pigments. The UX simulates squeezing paint (挤颜料) onto a canvas, layering strokes to choose amounts, then Mix to get a single blended swatch. The app scores similarity to a target color.
+
+⸻
+
+0) Core Gameplay Loop
+	1.	Show a target color swatch and name (or hex).
+	2.	Player selects from 10 tubes (professional pigment names).
+	3.	Player paints on a canvas; area painted per pigment represents amount used. Overlaps visually cover earlier paint but do not reduce previously counted amounts.
+	4.	Player hits Mix → app computes final mixture color from the recorded pigment amounts; canvas clears and shows a mixed pile whose size ∝ total amount.
+	5.	App computes score (color difference to target) and displays result, with optional hints or a replay.
+
+⸻
+
+1) Tech Stack & Project Setup
+	•	Frontend: HTML + CSS + TypeScript (or plain JS). No backend required.
+	•	Rendering: <canvas> 2D API.
+	•	State: Simple in‑memory store + optional localStorage for session history.
+	•	Build: Vite (fast dev server + bundling). Alternately plain static files.
+	•	Deploy: Netlify (drag‑and‑drop or Git deploy).
+
+Project structure
+
+color-mix-game/
+├─ public/
+│  ├─ favicon.svg
+│  └─ pigments.json          # optional pigment metadata
+├─ src/
+│  ├─ index.html
+│  ├─ style.css
+│  ├─ main.ts                # app entry
+│  ├─ color.ts               # color math (spaces, mixing, ΔE)
+│  ├─ paint.ts               # canvas tools & stroke capture
+│  ├─ game.ts                # game state machine
+│  ├─ ui.ts                  # DOM wiring, tubes, HUD, dialogs
+│  └─ assets/                # icons, swatches
+├─ vite.config.ts
+└─ netlify.toml               # optional redirects/build
+
+
+⸻
+
+2) Pigment Set (10 classic oil colors)
+
+Choose any balanced palette. Example set (with display hex approximations):
+	•	Titanium White (PW6) – #F2F2F2
+	•	Ivory Black (PBk9) – #1C1C1C
+	•	Cadmium Yellow Medium (PY35) – #F6C700
+	•	Yellow Ochre (PY43) – #C49A2C
+	•	Cadmium Red (PR108) – #D02A2A
+	•	Alizarin Crimson Hue (PR177-ish) – #8E1F2E
+	•	Ultramarine Blue (PB29) – #2C3FA3
+	•	Phthalo Blue (PB15:3) – #0C4DA2
+	•	Phthalo Green (PG7) – #0C8A6D
+	•	Burnt Sienna (PBr7) – #7A3B1C
+
+These hex values are for UI swatches only; the mixing math should use internal pigment colorants defined in a perceptual space (see §5). You can tweak hexes during calibration.
+
+⸻
+
+3) UX & UI Layout
+	•	Left panel: Target swatch, current score, timer (optional), and a “Next Target” button.
+	•	Center: Main paint canvas for laying down pigment strokes.
+	•	Right panel: Tubes palette (10 buttons), current brush size, “Undo Stroke”, “Clear”, and Mix.
+	•	After Mix: Show a centered mixed blob (pile) on a clean canvas. Blob radius ∝ total amount. Show your color vs target side‑by‑side (+ ΔE and a 0–100 score). Provide Replay to view strokes or try again.
+
+Interaction details
+	•	Brush draws opaque colored strokes on the visible canvas.
+	•	Each stroke increments the amount ledger for that pigment by k * brushArea * strokeLength (units ⇒ mL).
+	•	Overlap does not subtract amounts: the ledger is independent of what’s visible under later strokes.
+	•	Pointer events: mouse & touch support; pressure (PointerEvents pressure) can modulate stroke thickness.
+
+⸻
+
+4) Data Model (Types)
+
+// Pigment identity and display
+export type Pigment = {
+  id: string;           // e.g., "pw6"
+  name: string;         // "Titanium White"
+  swatchHex: string;    // for UI swatches only
+  colorant: XYZ;        // internal color basis (or OKLab)
+};
+
+// Stroke as drawn on canvas
+export type Stroke = {
+  pigmentId: string;
+  points: {x:number,y:number,t:number}[]; // sampled path
+  brushRadius: number;                    // px
+  length: number;                         // computed
+};
+
+// Running amount tally (mL)
+export type AmountLedger = Record<pigmentId, number>; 
+
+export type GameState = {
+  target: RGB;                 // target color in sRGB
+  pigments: Pigment[];
+  strokes: Stroke[];           // for undo/replay
+  amounts: AmountLedger;       // independent of overlaps
+  totalAmount: number;         // sum(amounts)
+  mixed: RGB | null;           // last mix result
+  phase: 'painting' | 'mixed' | 'review';
+};
+
+Ledger increment per stroke:
+
+amount += densityFactor * π * (brushRadius^2) * strokeLength * pressureAvg * scalePxToMl
+
+Tune densityFactor & scalePxToMl so the pile size feels right.
+
+⸻
+
+5) Mixing Algorithms (Good → Better → Best)
+
+Real paints mix subtractive (absorb light). True modeling uses Kubelka–Munk (K/S) with per‑pigment coefficients, but that’s heavy for an MVP. Choose a tier:
+
+Tier A — MVP (fast & plausible)
+	1.	Convert each pigment’s sRGB to linear RGB.
+	2.	Convert to OKLab (perceptual uniform space).
+	3.	Compute amount‑weighted average in OKLab.
+	4.	Apply a subtractive darkening curve to emulate paint: L' = L * (1 - d*(1 - f)) where f = clamp(totalAmount / A, 0, 1) and d≈0.35 tunes darkening with load.
+	5.	Convert back to sRGB and clamp.
+
+Pros: simple, nice perceptual behavior. Cons: not spectrally accurate (blue+yellow yields neutral more by tuning than physics).
+
+Tier B — Subtractive CMY heuristic
+	1.	Convert sRGB → CMY (c=1-r, etc) in linear domain.
+	2.	Combine with weighted multiplicative absorption: Cmix = 1 - Π(1 - wi * Ci) (do per channel), where wi = amount_i / total.
+	3.	Convert CMY → sRGB.
+
+Pros: better subtractive feel (complements multiply). Cons: still approximate.
+
+Tier C — Kubelka–Munk (future upgrade)
+
+Implement 2‑flux K–M with K and S per pigment (mass tone + tint). Mix by mass fractions: (K/S)_mix = Σ wi * (K/S)_i, derive reflectance R. Requires empirical data or vendor charts.
+
+Recommendation: ship Tier A or B for MVP, then add Calibration Mode to nudge parameters so common mixes (e.g., Ultramarine + Yellow Ochre → muted green) feel right.
+
+⸻
+
+6) Scoring (Similarity)
+
+Use ΔE2000 between target and mixed color in Lab.
+
+score = max(0, 100 - k * ΔE00)
+# k ≈ 2.3 → near‑match ≈ 100, visible differences drop score modestly
+
+Also show a simple ring meter and a text verdict (Perfect, Close, Far, etc). Store past attempts for a heatmap of miss bias.
+
+⸻
+
+7) Canvas & Rendering
+	•	Maintain two <canvas> elements:
+	•	drawCanvas: visible strokes (for user feedback)
+	•	pileCanvas: after Mix, render a blob representing total amount
+	•	On each pointer move:
+	•	Append to current Stroke.points.
+	•	Stroke line segments on drawCanvas.
+	•	Accumulate strokeLength by segment distance.
+	•	On pointer up:
+	•	Compute stroke length and increment ledger for the active pigment.
+
+Mixed pile: draw a soft round blob with inner shadow and specular highlight. Radius R = base + k * sqrt(totalAmount). Fill with mixedColor.
+
+⸻
+
+8) Undo/Redo & Overlaps
+	•	Undo removes last Stroke from strokes and decrements that pigment’s ledger by that stroke’s contribution. Re‑render drawCanvas by replaying remaining strokes.
+	•	Because amounts are independent of visibility, overlaps need no special handling.
+
+⸻
+
+9) Target Generation
+	•	Mode 1 (Random): Sample in OKLab, bias away from extremes.
+	•	Mode 2 (Curriculum): Prebuilt list with names (e.g., “Viridian Tint”, “Muted Plum”).
+	•	Mode 3 (Challenge): Reverse‑engineered targets: pick a synthetic recipe of 2–3 pigments and hide the recipe.
+
+Optionally display a hint bar (dominant hue, lightness range) that costs points.
+
+⸻
+
+10) Accessibility & Mobile
+	•	High‑contrast UI, keyboard shortcuts (1–0 to pick pigments).
+	•	Touch support; use large hit targets (>44 px).
+	•	Color‑blind assistance: add numeric Lab* readout and optional monochrome luminance strip.
+
+⸻
+
+11) Performance
+	•	Throttle pointer sampling (e.g., every 8–12 ms) and coalesce events.
+	•	Use offscreen canvas (or a single path per frame) to reduce draw calls.
+	•	Keep color conversions vectorized where possible.
+
+⸻
+
+12) Testing Plan
+	•	Unit: color conversions, ΔE, mixing math.
+	•	Visual: golden images for specific mixes.
+	•	Interaction: cypress/playwright for stroke, undo, mix.
+
+⸻
+
+13) Implementation Snippets (MVP)
+
+index.html (simplified)
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Color Mix Challenge</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside id="left">
+    <div class="target">
+      <div id="targetSwatch"></div>
+      <div id="targetHex"></div>
+      <button id="nextTarget">Next Target</button>
+    </div>
+    <div class="score">
+      <div id="score">—</div>
+    </div>
+  </aside>
+
+  <main>
+    <canvas id="drawCanvas" width="900" height="600"></canvas>
+    <canvas id="pileCanvas" width="900" height="600" hidden></canvas>
+  </main>
+
+  <aside id="right">
+    <div id="tubes" class="tubes"></div>
+    <div class="tools">
+      <input type="range" id="brush" min="4" max="48" value="16" />
+      <button id="undo">Undo</button>
+      <button id="clear">Clear</button>
+      <button id="mix">Mix</button>
+    </div>
+  </aside>
+
+  <script type="module" src="main.ts"></script>
+</body>
+</html>
+
+color.ts (core pieces)
+
+export type RGB = {r:number,g:number,b:number};
+export type Lab = {L:number,a:number,b:number};
+
+// sRGB ↔ linear
+export const srgbToLinear = (u:number)=> u<=0.04045? u/12.92: Math.pow((u+0.055)/1.055, 2.4);
+export const linearToSrgb = (u:number)=> u<=0.0031308? 12.92*u: 1.055*Math.pow(u,1/2.4)-0.055;
+
+export function rgbToLinear({r,g,b}:RGB):RGB {
+  return { r:srgbToLinear(r/255), g:srgbToLinear(g/255), b:srgbToLinear(b/255) };
+}
+export function linearToRgb({r,g,b}:RGB):RGB {
+  return { r:Math.round(255*linearToSrgb(r)), g:Math.round(255*linearToSrgb(g)), b:Math.round(255*linearToSrgb(b)) };
+}
+
+// Linear RGB ↔ OKLab (approx)
+// Matrices/constants omitted for brevity; use standard OKLab implementation.
+
+export function mixOKLabWeighted(colors:{lab:Lab,w:number}[]):Lab {
+  const W = colors.reduce((s,c)=>s+c.w,0) || 1;
+  const L = colors.reduce((s,c)=>s+c.lab.L*c.w,0)/W;
+  const a
