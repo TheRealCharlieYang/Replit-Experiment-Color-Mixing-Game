@@ -68,14 +68,6 @@ export default function GamePage() {
         <div className="flex items-center justify-between mt-4 px-2">
           <div className="flex items-center space-x-4 text-sm text-warm-gray-600">
             <span>
-              Total Paint: <span className="font-medium" data-testid="status-total-paint">
-                {gameState.totalAmount < 0.1 
-                  ? `${(gameState.totalAmount * 1000).toFixed(0)}μL`
-                  : `${gameState.totalAmount.toFixed(1)} mL`
-                }
-              </span>
-            </span>
-            <span>
               Strokes: <span className="font-medium" data-testid="status-stroke-count">
                 {gameState.strokes.length}
               </span>
