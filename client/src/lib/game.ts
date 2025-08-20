@@ -13,14 +13,14 @@ function createPigment(id: string, name: string, code: string, swatchHex: string
 export const DEFAULT_PIGMENTS: Pigment[] = [
   createPigment("pw6", "Titanium White", "PW6", "#F2F2F2"),
   createPigment("pbk9", "Ivory Black", "PBk9", "#1C1C1C"),
-  createPigment("py35", "Cadmium Yellow", "PY35", "#F6C700"),
-  createPigment("py43", "Yellow Ochre", "PY43", "#C49A2C"),
-  createPigment("pr108", "Cadmium Red", "PR108", "#D02A2A"),
-  createPigment("pr177", "Alizarin Crimson", "PR177", "#8E1F2E"),
-  createPigment("pb29", "Ultramarine Blue", "PB29", "#2C3FA3"),
-  createPigment("pb15", "Phthalo Blue", "PB15", "#0C4DA2"),
-  createPigment("pg7", "Phthalo Green", "PG7", "#0C8A6D"),
-  createPigment("pbr7", "Burnt Sienna", "PBr7", "#7A3B1C"),
+  createPigment("py35", "Cadmium Yellow", "PY35", "#FFD200"),
+  createPigment("py43", "Yellow Ochre", "PY43", "#C6862B"),
+  createPigment("pr108", "Cadmium Red", "PR108", "#E03C31"),
+  createPigment("pr177", "Alizarin Crimson", "PR177", "#8A2232"),
+  createPigment("pb29", "Ultramarine Blue", "PB29", "#3F4BA0"),
+  createPigment("pb15", "Phthalo Blue", "PB15", "#0F4C81"),
+  createPigment("pg7", "Phthalo Green", "PG7", "#00836C"),
+  createPigment("pbr7", "Burnt Sienna", "PBr7", "#8A3B12"),
 ];
 
 // Predefined target colors with names
@@ -136,9 +136,8 @@ export function mixColors(state: GameState, pigments: Pigment[]): GameState {
   return {
     ...state,
     mixed: mixedRgb,
-    phase: "mixed",
+    phase: "review", // Change to review phase to show continue option
     score,
-    // Keep canvas in painting mode so user can continue adding paint
   };
 }
 
