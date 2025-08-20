@@ -2,25 +2,78 @@ import type { GameState, Pigment, RGB, SessionStats, MatchResult, MatchHistory }
 import { rgbToOKLab, mixColorsOKLab, okLabToRgb, calculateColorScore, rgbToHex, hexToRgb } from "./color";
 import { nanoid } from "nanoid";
 
-// Default pigments based on classic oil paint colors
-// Function to convert hex to proper OKLab colorant values
-function createPigment(id: string, name: string, code: string, swatchHex: string): Pigment {
-  const rgb = hexToRgb(swatchHex);
-  const colorant = rgbToOKLab(rgb);
-  return { id, name, code, swatchHex, colorant };
-}
-
+// Default pigments with direct OKLab values to avoid conversion drift
 export const DEFAULT_PIGMENTS: Pigment[] = [
-  createPigment("pw6", "Titanium White", "PW6", "#F2F2F2"),
-  createPigment("pbk9", "Ivory Black", "PBk9", "#1C1C1C"),
-  createPigment("py35", "Cadmium Yellow", "PY35", "#FFD200"),
-  createPigment("py43", "Yellow Ochre", "PY43", "#C6862B"),
-  createPigment("pr108", "Cadmium Red", "PR108", "#E03C31"),
-  createPigment("pr177", "Alizarin Crimson", "PR177", "#8A2232"),
-  createPigment("pb29", "Ultramarine Blue", "PB29", "#3F4BA0"),
-  createPigment("pb15", "Phthalo Blue", "PB15", "#0F4C81"),
-  createPigment("pg7", "Phthalo Green", "PG7", "#00836C"),
-  createPigment("pbr7", "Burnt Sienna", "PBr7", "#8A3B12"),
+  {
+    id: "pw6",
+    name: "Titanium White",
+    code: "PW6",
+    swatchHex: "#F2F2F2",
+    colorant: { L: 0.96, a: 0.00, b: 0.00 }, // Pure white in OKLab
+  },
+  {
+    id: "pbk9", 
+    name: "Ivory Black",
+    code: "PBk9",
+    swatchHex: "#1C1C1C",
+    colorant: { L: 0.15, a: 0.00, b: 0.00 }, // Pure black in OKLab
+  },
+  {
+    id: "py35",
+    name: "Cadmium Yellow", 
+    code: "PY35",
+    swatchHex: "#FFD200",
+    colorant: { L: 0.88, a: 0.02, b: 0.18 }, // Bright yellow
+  },
+  {
+    id: "py43",
+    name: "Yellow Ochre",
+    code: "PY43", 
+    swatchHex: "#C6862B",
+    colorant: { L: 0.62, a: 0.05, b: 0.12 }, // Earthy yellow
+  },
+  {
+    id: "pr108",
+    name: "Cadmium Red",
+    code: "PR108",
+    swatchHex: "#E03C31", 
+    colorant: { L: 0.55, a: 0.22, b: 0.14 }, // Bright red
+  },
+  {
+    id: "pr177",
+    name: "Alizarin Crimson",
+    code: "PR177",
+    swatchHex: "#8A2232",
+    colorant: { L: 0.32, a: 0.18, b: 0.08 }, // Deep crimson
+  },
+  {
+    id: "pb29",
+    name: "Ultramarine Blue",
+    code: "PB29", 
+    swatchHex: "#3F4BA0",
+    colorant: { L: 0.42, a: 0.08, b: -0.25 }, // Classic blue
+  },
+  {
+    id: "pb15",
+    name: "Phthalo Blue",
+    code: "PB15",
+    swatchHex: "#0F4C81",
+    colorant: { L: 0.35, a: -0.02, b: -0.22 }, // Deep blue
+  },
+  {
+    id: "pg7", 
+    name: "Phthalo Green",
+    code: "PG7",
+    swatchHex: "#00836C",
+    colorant: { L: 0.48, a: -0.15, b: 0.05 }, // Blue-green
+  },
+  {
+    id: "pbr7",
+    name: "Burnt Sienna", 
+    code: "PBr7",
+    swatchHex: "#8A3B12",
+    colorant: { L: 0.35, a: 0.12, b: 0.08 }, // Rich brown
+  },
 ];
 
 // Predefined target colors with names

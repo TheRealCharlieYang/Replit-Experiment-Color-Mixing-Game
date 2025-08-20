@@ -75,7 +75,7 @@ export function okLabToRgb(oklab: OKLab): RGB {
   return linearToRgb(okLabToLinearRgb(oklab));
 }
 
-// Color mixing in OKLab space with subtractive behavior
+// Color mixing in OKLab space with improved subtractive behavior
 export function mixColorsOKLab(colors: { color: OKLab; weight: number }[]): OKLab {
   const totalWeight = colors.reduce((sum, c) => sum + c.weight, 0);
   if (totalWeight === 0) return { L: 1, a: 0, b: 0 };
@@ -85,17 +85,20 @@ export function mixColorsOKLab(colors: { color: OKLab; weight: number }[]): OKLa
   const mixedA = colors.reduce((sum, c) => sum + c.color.a * c.weight, 0) / totalWeight;
   const mixedB = colors.reduce((sum, c) => sum + c.color.b * c.weight, 0) / totalWeight;
 
-  // Improved subtractive mixing with better darkening behavior
-  const numColors = colors.filter(c => c.weight > 0).length;
-  const complexity = Math.min(numColors / 3, 1); // More colors = more complex mixing
-  const darkeningFactor = 0.15 + complexity * 0.15; // Variable darkening based on complexity
+  // Check if this is primarily white (high L, low a and b)
+  const isMainlyWhite = mixedL > 0.9 && Math.abs(mixedA) < 0.05 && Math.abs(mixedB) < 0.05;
   
-  // Apply subtractive darkening
-  const adjustedL = mixedL * (1 - darkeningFactor);
+  // Apply minimal darkening for realistic subtractive mixing
+  let adjustedL = mixedL;
+  if (!isMainlyWhite) {
+    const numColors = colors.filter(c => c.weight > 0).length;
+    const darkeningFactor = Math.min(0.05 * (numColors - 1), 0.15); // Very gentle darkening
+    adjustedL = mixedL * (1 - darkeningFactor);
+  }
 
   return {
-    L: Math.max(0.05, Math.min(1, adjustedL)), // Prevent pure black and pure white
-    a: Math.max(-0.5, Math.min(0.5, mixedA)), // Clamp chroma values
+    L: Math.max(0.05, Math.min(1, adjustedL)),
+    a: Math.max(-0.5, Math.min(0.5, mixedA)),
     b: Math.max(-0.5, Math.min(0.5, mixedB)),
   };
 }
