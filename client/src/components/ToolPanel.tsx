@@ -41,8 +41,8 @@ export function ToolPanel({
   };
 
   return (
-    <aside className="w-80 bg-white border-l border-warm-gray-200 p-4 flex flex-col h-screen">
-      <div className="flex-1 flex flex-col space-y-4 min-h-0">
+    <aside className="w-80 bg-white border-l border-warm-gray-200 p-4 overflow-y-auto">
+      <div className="space-y-4">
         {/* Pigment Tubes */}
         <div>
           <h3 className="font-semibold text-warm-gray-900 mb-4 flex items-center">
@@ -105,7 +105,7 @@ export function ToolPanel({
         </div>
 
         {/* Action Buttons */}
-        <div className="border-t border-warm-gray-200 pt-4 space-y-3 mt-auto">
+        <div className="border-t border-warm-gray-200 pt-4 space-y-3">
           <Button
             onClick={onMixColors}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3"

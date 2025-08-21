@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { GameCanvas } from "../components/GameCanvas";
 import { TargetPanel } from "../components/TargetPanel";
 import { ToolPanel } from "../components/ToolPanel";
 import { ResultModal } from "../components/ResultModal";
+import { Fireworks } from "../components/Fireworks";
 import { useGameState } from "../hooks/useGameState";
 import { DEFAULT_PIGMENTS } from "../lib/game";
 
@@ -21,6 +22,27 @@ export default function GamePage() {
   } = useGameState();
 
   const [showResultModal, setShowResultModal] = useState(false);
+  const [showFireworks, setShowFireworks] = useState(false);
+  const [fireworksSpecial, setFireworksSpecial] = useState(false);
+
+  // Trigger fireworks when score exceeds 90 or when Permanent Rose appears
+  useEffect(() => {
+    if (gameState.score && gameState.score > 90) {
+      setShowFireworks(true);
+      // Auto-hide fireworks after 3 seconds
+      setTimeout(() => setShowFireworks(false), 3000);
+    }
+    
+    if (gameState.targetName === "Permanent Rose") {
+      setFireworksSpecial(true);
+      setShowFireworks(true);
+      // Auto-hide special fireworks after 5 seconds
+      setTimeout(() => {
+        setShowFireworks(false);
+        setFireworksSpecial(false);
+      }, 5000);
+    }
+  }, [gameState.score, gameState.targetName]);
 
   const handleMixColors = () => {
     mix();
@@ -113,6 +135,9 @@ export default function GamePage() {
           onNextTarget={handleNextTarget}
         />
       )}
+
+      {/* Fireworks Effect */}
+      <Fireworks trigger={showFireworks} isSpecial={fireworksSpecial} />
     </div>
   );
 }
