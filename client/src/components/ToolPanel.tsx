@@ -71,8 +71,8 @@ export function ToolPanel({
             <Slider
               value={[brushSize]}
               onValueChange={([value]) => onBrushSizeChange(value)}
-              min={4}
-              max={48}
+              min={8}
+              max={96}
               step={1}
               className="w-full"
               data-testid="slider-brush-size"

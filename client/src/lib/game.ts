@@ -103,7 +103,7 @@ export function createInitialGameState(): GameState {
     phase: "painting",
     score: null,
     activePigmentId: "py35", // Default to Cadmium Yellow
-    brushSize: 16,
+    brushSize: 32, // Double the previous default (16 * 2)
   };
 }
 

@@ -9,6 +9,7 @@ export interface PaintEngine {
   strokes: Stroke[];
   activePigment: Pigment;
   brushSize: number;
+  lastMoveTime?: number;
 }
 
 export function createPaintEngine(canvas: HTMLCanvasElement, pigment: Pigment): PaintEngine {
@@ -44,7 +45,7 @@ export function startStroke(
     id: nanoid(),
     pigmentId: engine.activePigment.id,
     points: [startPoint],
-    brushRadius: engine.brushSize,
+    brushRadius: engine.brushSize / 2, // Convert diameter to radius
     length: 0,
     amount: 0,
   };
@@ -75,11 +76,14 @@ export function continueStroke(
     Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2)
   );
   
+  // Skip very short segments to avoid rendering issues
+  if (segmentLength < 1) return;
+  
   engine.currentStroke.points.push(newPoint);
   engine.currentStroke.length += segmentLength;
   
-  // Draw continuous thick brush stroke with tapered ends
-  drawThickBrushStroke(engine, lastPoint, newPoint);
+  // Draw smooth continuous stroke segment
+  drawSmoothStrokeSegment(engine, lastPoint, newPoint);
 }
 
 export function endStroke(engine: PaintEngine): Stroke | null {
@@ -112,7 +116,7 @@ function drawPoint(engine: PaintEngine, x: number, y: number, pressure: number):
 }
 
 export function drawPaintSquirt(engine: PaintEngine, x: number, y: number, pressure: number): void {
-  const baseRadius = engine.brushSize / 2;
+  const baseRadius = engine.brushSize / 2; // brushSize is diameter
   const paintAmount = baseRadius * pressure;
   
   engine.ctx.save();
@@ -144,7 +148,7 @@ export function drawPaintSquirt(engine: PaintEngine, x: number, y: number, press
   gradient.addColorStop(0.6, base);
   gradient.addColorStop(1, shadow);
   
-  engine.ctx.globalAlpha = 0.9;
+  engine.ctx.globalAlpha = 0.95; // Increased opacity for better visibility
   engine.ctx.fillStyle = gradient;
   engine.ctx.beginPath();
   engine.ctx.arc(x, y, paintAmount, 0, Math.PI * 2);
@@ -178,21 +182,26 @@ function drawLineSegment(engine: PaintEngine, from: StrokePoint, to: StrokePoint
   engine.ctx.restore();
 }
 
-function drawThickBrushStroke(engine: PaintEngine, from: StrokePoint, to: StrokePoint): void {
+function drawSmoothStrokeSegment(engine: PaintEngine, from: StrokePoint, to: StrokePoint): void {
   const distance = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
   if (distance < 1) return; // Skip very short segments
   
   engine.ctx.save();
   
-  // Create thick brush stroke with shadow
-  const baseWidth = engine.brushSize;
+  // Calculate tapering based on stroke progress
+  const strokeProgress = engine.currentStroke ? 
+    engine.currentStroke.points.length / Math.max(engine.currentStroke.points.length + 10, 20) : 1;
+  const taperFactor = Math.max(0.3, 1 - strokeProgress * 0.4); // Gradual taper
+  
+  const baseWidth = engine.brushSize * taperFactor;
   const fromPressure = from.pressure || 1;
   const toPressure = to.pressure || 1;
+  const avgPressure = (fromPressure + toPressure) / 2;
   
   // Draw shadow first
   engine.ctx.globalAlpha = 0.3;
   engine.ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
-  engine.ctx.lineWidth = baseWidth * Math.max(fromPressure, toPressure);
+  engine.ctx.lineWidth = baseWidth * avgPressure;
   engine.ctx.lineCap = "round";
   engine.ctx.lineJoin = "round";
   engine.ctx.beginPath();
@@ -200,30 +209,49 @@ function drawThickBrushStroke(engine: PaintEngine, from: StrokePoint, to: Stroke
   engine.ctx.lineTo(to.x + 2, to.y + 2);
   engine.ctx.stroke();
   
-  // Draw main stroke with gradient
-  const gradient = engine.ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+  // Create perpendicular gradient for 3D effect
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+  const perpX = Math.cos(angle + Math.PI / 2) * baseWidth * avgPressure / 2;
+  const perpY = Math.sin(angle + Math.PI / 2) * baseWidth * avgPressure / 2;
+  
+  const centerX = (from.x + to.x) / 2;
+  const centerY = (from.y + to.y) / 2;
+  
+  const gradient = engine.ctx.createLinearGradient(
+    centerX - perpX, centerY - perpY,
+    centerX + perpX, centerY + perpY
+  );
   
   const hex = engine.activePigment.swatchHex;
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   
-  const highlight = `rgba(${Math.min(255, r + 30)}, ${Math.min(255, g + 30)}, ${Math.min(255, b + 30)}, 0.9)`;
-  const base = `rgba(${r}, ${g}, ${b}, 0.85)`;
+  const highlight = `rgba(${Math.min(255, r + 35)}, ${Math.min(255, g + 35)}, ${Math.min(255, b + 35)}, 0.95)`;
+  const base = `rgba(${r}, ${g}, ${b}, 0.9)`;
+  const shadow = `rgba(${Math.max(0, r - 25)}, ${Math.max(0, g - 25)}, ${Math.max(0, b - 25)}, 0.9)`;
   
   gradient.addColorStop(0, highlight);
-  gradient.addColorStop(0.5, base);
-  gradient.addColorStop(1, highlight);
+  gradient.addColorStop(0.3, base);
+  gradient.addColorStop(0.7, base);
+  gradient.addColorStop(1, shadow);
   
-  engine.ctx.globalAlpha = 0.9;
+  engine.ctx.globalAlpha = 0.95; // Increased opacity for better visibility
   engine.ctx.strokeStyle = gradient;
-  engine.ctx.lineWidth = baseWidth * fromPressure;
+  engine.ctx.lineWidth = baseWidth * avgPressure;
   engine.ctx.lineCap = "round";
   engine.ctx.lineJoin = "round";
   engine.ctx.beginPath();
   engine.ctx.moveTo(from.x, from.y);
   engine.ctx.lineTo(to.x, to.y);
   engine.ctx.stroke();
+  
+  // Add end cap for seamless connection
+  engine.ctx.globalAlpha = 0.9;
+  engine.ctx.fillStyle = base;
+  engine.ctx.beginPath();
+  engine.ctx.arc(to.x, to.y, (baseWidth * toPressure) / 2, 0, Math.PI * 2);
+  engine.ctx.fill();
   
   engine.ctx.restore();
 }
@@ -238,17 +266,25 @@ export function redrawAllStrokes(engine: PaintEngine, strokes: Stroke[], allPigm
     if (!pigment) return;
     
     const oldPigment = engine.activePigment;
+    const oldBrushSize = engine.brushSize;
     engine.activePigment = pigment;
+    engine.brushSize = stroke.brushRadius * 2; // Convert radius back to diameter
+    
+    // Create a temporary stroke for rendering
+    const tempStroke = engine.currentStroke;
+    engine.currentStroke = stroke;
     
     stroke.points.forEach((point, index) => {
       if (index === 0) {
         drawPaintSquirt(engine, point.x, point.y, point.pressure || 1);
       } else {
-        drawThickBrushStroke(engine, stroke.points[index - 1], point);
+        drawSmoothStrokeSegment(engine, stroke.points[index - 1], point);
       }
     });
     
+    engine.currentStroke = tempStroke;
     engine.activePigment = oldPigment;
+    engine.brushSize = oldBrushSize;
   });
 }
 
@@ -304,7 +340,7 @@ export function renderStrokes(
     if (!pigment || stroke.points.length === 0) return;
     
     ctx.save();
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.9; // Increased opacity for better visibility
     ctx.fillStyle = pigment.swatchHex;
     ctx.strokeStyle = pigment.swatchHex;
     ctx.lineCap = 'round';
@@ -312,7 +348,10 @@ export function renderStrokes(
     
     // Draw each point in the stroke
     stroke.points.forEach((point, index) => {
-      const radius = (stroke.brushRadius / 2) * (point.pressure || 1);
+      // Apply tapering
+      const progress = index / Math.max(stroke.points.length - 1, 1);
+      const taperFactor = Math.max(0.3, 1 - progress * 0.4);
+      const radius = stroke.brushRadius * taperFactor * (point.pressure || 1);
       
       if (index === 0) {
         // Draw initial point
@@ -322,12 +361,14 @@ export function renderStrokes(
       } else {
         // Draw line segment
         const prevPoint = stroke.points[index - 1];
-        const prevRadius = (stroke.brushRadius / 2) * (prevPoint.pressure || 1);
+        const prevProgress = (index - 1) / Math.max(stroke.points.length - 1, 1);
+        const prevTaperFactor = Math.max(0.3, 1 - prevProgress * 0.4);
+        const prevRadius = stroke.brushRadius * prevTaperFactor * (prevPoint.pressure || 1);
         
         ctx.beginPath();
         ctx.moveTo(prevPoint.x, prevPoint.y);
         ctx.lineTo(point.x, point.y);
-        ctx.lineWidth = Math.max(radius, prevRadius) * 2;
+        ctx.lineWidth = (radius + prevRadius);
         ctx.stroke();
         
         // Draw end cap

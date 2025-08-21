@@ -73,6 +73,11 @@ export function GameCanvas({
     if (phase !== "painting" || !engineRef.current) return;
 
     const { x, y, pressure } = getPointerPosition(canvasRef.current!, event);
+    
+    // Ensure we have a clean start for the new stroke
+    engineRef.current.isDrawing = false;
+    engineRef.current.currentStroke = null;
+    
     startStroke(engineRef.current, x, y, pressure);
     
     // Capture pointer for consistent events
@@ -94,7 +99,12 @@ export function GameCanvas({
 
     // Continue stroke if drawing
     if (phase === "painting" && engineRef.current?.isDrawing) {
+      // Throttle pointer events for better performance
+      const now = Date.now();
+      if (!engineRef.current.lastMoveTime || now - engineRef.current.lastMoveTime > 8) {
+        engineRef.current.lastMoveTime = now;
       continueStroke(engineRef.current, x, y, pressure);
+      }
     }
   }, [phase]);
 
