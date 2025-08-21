@@ -10,12 +10,12 @@ interface PigmentPaletteProps {
 
 export function PigmentPalette({ pigments, activePigmentId, onSelectPigment }: PigmentPaletteProps) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-2">
       {pigments.map((pigment) => (
         <Button
           key={pigment.id}
           variant="ghost"
-          className={`paint-tube h-auto p-3 text-left transition-all hover:bg-gray-100 border border-warm-gray-200 ${
+          className={`paint-tube h-auto p-2 text-left transition-all hover:bg-gray-100 border border-warm-gray-200 ${
             activePigmentId === pigment.id
               ? "active bg-yellow-50 border-yellow-300"
               : "bg-gray-50"
@@ -23,9 +23,9 @@ export function PigmentPalette({ pigments, activePigmentId, onSelectPigment }: P
           onClick={() => onSelectPigment(pigment.id)}
           data-testid={`pigment-${pigment.id}`}
         >
-          <div className="flex flex-col items-start space-y-2 w-full">
+          <div className="flex flex-col items-start space-y-1 w-full">
             <div
-              className="w-8 h-8 rounded-full border border-warm-gray-300"
+              className="w-6 h-6 rounded-full border border-warm-gray-300"
               style={{ backgroundColor: pigment.swatchHex }}
             />
             <div className="font-medium text-xs text-warm-gray-900 leading-tight">

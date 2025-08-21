@@ -41,8 +41,8 @@ export function ToolPanel({
   };
 
   return (
-    <aside className="w-80 bg-white border-l border-warm-gray-200 p-6 overflow-y-auto">
-      <div className="space-y-6">
+    <aside className="w-80 bg-white border-l border-warm-gray-200 p-4 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col space-y-4 min-h-0">
         {/* Pigment Tubes */}
         <div>
           <h3 className="font-semibold text-warm-gray-900 mb-4 flex items-center">
@@ -57,14 +57,14 @@ export function ToolPanel({
         </div>
 
         {/* Brush Controls */}
-        <div className="border-t border-warm-gray-200 pt-6">
-          <h4 className="font-semibold text-warm-gray-900 mb-4 flex items-center">
+        <div className="border-t border-warm-gray-200 pt-4">
+          <h4 className="font-semibold text-warm-gray-900 mb-3 flex items-center">
             <Paintbrush className="w-4 h-4 mr-2 text-green-600" />
             Brush Settings
           </h4>
 
           {/* Brush Size */}
-          <div className="mb-4">
+          <div className="mb-3">
             <label className="block text-sm font-medium text-warm-gray-700 mb-2">
               Brush Size: <span className="font-normal" data-testid="text-brush-size">{brushSize}px</span>
             </label>
@@ -85,7 +85,7 @@ export function ToolPanel({
 
           {/* Active Pigment Display */}
           {activePigment && (
-            <div className="bg-warm-gray-50 rounded-lg p-3 mb-4">
+            <div className="bg-warm-gray-50 rounded-lg p-2 mb-3">
               <div className="flex items-center space-x-3">
                 <div
                   className="w-6 h-6 rounded-full border border-warm-gray-300"
@@ -105,7 +105,7 @@ export function ToolPanel({
         </div>
 
         {/* Action Buttons */}
-        <div className="border-t border-warm-gray-200 pt-6 space-y-3">
+        <div className="border-t border-warm-gray-200 pt-4 space-y-3 mt-auto">
           <Button
             onClick={onMixColors}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3"
@@ -140,11 +140,11 @@ export function ToolPanel({
           </div>
 
           {/* Paint Amount Summary */}
-          <div className="bg-blue-50 rounded-lg p-3 text-sm">
-            <div className="font-medium text-blue-900 mb-2">Paint Used</div>
-            <div className="space-y-1 text-blue-800">
+          <div className="bg-blue-50 rounded-lg p-2 text-xs">
+            <div className="font-medium text-blue-900 mb-1">Paint Used</div>
+            <div className="space-y-0.5 text-blue-800">
               {Object.entries(paintAmounts).length === 0 ? (
-                <div className="text-blue-600 text-xs">No paint used yet</div>
+                <div className="text-blue-600 text-xs">No paint used</div>
               ) : (
                 Object.entries(paintAmounts).map(([pigmentId, amount]) => {
                   const pigment = pigments.find(p => p.id === pigmentId);
@@ -157,7 +157,7 @@ export function ToolPanel({
                 })
               )}
               {totalAmount > 0 && (
-                <div className="flex justify-between font-medium border-t border-blue-200 pt-1 mt-2">
+                <div className="flex justify-between font-medium border-t border-blue-200 pt-1 mt-1">
                   <span>Total:</span>
                   <span data-testid="text-total-amount">{formatAmount(totalAmount)}</span>
                 </div>
