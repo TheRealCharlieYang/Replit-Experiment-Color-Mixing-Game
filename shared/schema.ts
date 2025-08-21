@@ -26,6 +26,7 @@ export const PigmentSchema = z.object({
   code: z.string(),
   swatchHex: z.string(),
   colorant: OKLabSchema,
+  description: z.string(),
 });
 
 // Stroke data

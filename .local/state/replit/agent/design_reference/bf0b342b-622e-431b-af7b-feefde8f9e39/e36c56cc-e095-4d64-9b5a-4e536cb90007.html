@@ -1,0 +1,506 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Mix Challenge - Professional Paint Mixing Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    'inter': ['Inter', 'sans-serif'],
+                }
+            }
+        }
+    };
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .paint-tube {
+            transition: all 0.2s ease-in-out;
+        }
+        .paint-tube:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .paint-tube.active {
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 3px #2563EB40;
+        }
+        .canvas-container {
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #fafafa 0%, #f0f0f0 100%);
+        }
+        #paintCanvas {
+            cursor: crosshair;
+            border-radius: 8px;
+        }
+        #paintCanvas:active {
+            cursor: none;
+        }
+        .score-ring {
+            background: conic-gradient(from 0deg, #10B981 0deg, #10B981 calc(var(--score, 0) * 3.6deg), #E5E7EB calc(var(--score, 0) * 3.6deg), #E5E7EB 360deg);
+            border-radius: 50%;
+        }
+        .mixed-pile {
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.6) 0%, transparent 50%);
+            box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.15);
+            transition: all 0.5s ease-out;
+        }
+        .brush-cursor {
+            position: absolute;
+            border: 2px solid #2563EB;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.6;
+            z-index: 10;
+            transition: width 0.1s ease, height 0.1s ease;
+        }
+        .pigment-titanium-white { background-color: #F2F2F2; }
+        .pigment-ivory-black { background-color: #1C1C1C; }
+        .pigment-cadmium-yellow { background-color: #F6C700; }
+        .pigment-yellow-ochre { background-color: #C49A2C; }
+        .pigment-cadmium-red { background-color: #D02A2A; }
+        .pigment-alizarin-crimson { background-color: #8E1F2E; }
+        .pigment-ultramarine-blue { background-color: #2C3FA3; }
+        .pigment-phthalo-blue { background-color: #0C4DA2; }
+        .pigment-phthalo-green { background-color: #0C8A6D; }
+        .pigment-burnt-sienna { background-color: #7A3B1C; }
+    </style>
+</head>
+<body class="bg-slate-50 font-inter">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Left Panel - Target & Scoring -->
+        <div class="w-1/4 bg-white border-r border-slate-200 flex flex-col">
+            <!-- Current Target -->
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Target Color</h2>
+                <div class="bg-slate-100 rounded-lg p-4 mb-4">
+                    <!-- Target color swatch with realistic proportions -->
+                    <div class="w-full h-24 rounded-md shadow-inner mb-3" style="background-color: #8B5A3C;" data-mock="true"></div>
+                    <div class="text-sm text-slate-600 text-center" data-bind="target.name" data-mock="true">Burnt Umber Tint</div>
+                    <div class="text-xs text-slate-500 text-center mt-1" data-bind="target.hex" data-mock="true">#8B5A3C</div>
+                </div>
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200" data-event="click:generateNewTarget" data-mock="true">
+                    Next Target
+                </button>
+            </div>
+
+            <!-- Current Score -->
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Current Score</h2>
+                <div class="flex items-center justify-center mb-4">
+                    <div class="relative w-20 h-20">
+                        <div class="score-ring w-full h-full" style="--score: 78" data-bind="currentScore" data-mock="true"></div>
+                        <div class="absolute inset-2 bg-white rounded-full flex items-center justify-center">
+                            <span class="text-2xl font-bold text-slate-800" data-bind="currentScore" data-mock="true">78</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm font-medium text-slate-700" data-bind="scoreLabel" data-mock="true">Good Match!</div>
+                    <div class="text-xs text-slate-500 mt-1">ΔE: <span data-bind="deltaE" data-mock="true">12.4</span></div>
+                </div>
+            </div>
+
+            <!-- High Score -->
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">High Score</h2>
+                <div class="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4">
+                    <div class="text-3xl font-bold text-amber-700 text-center" data-bind="highScore" data-mock="true">94</div>
+                    <div class="text-sm text-amber-600 text-center mt-1">Personal Best</div>
+                </div>
+            </div>
+
+            <!-- Match History -->
+            <div class="p-6 flex-1 overflow-y-auto">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Recent Attempts</h2>
+                <div class="space-y-3">
+                    <!-- @MAP: matchHistory.map(match => ( -->
+                    <div class="bg-slate-50 rounded-lg p-3" data-mock="true">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-slate-700">Score: 85</span>
+                            <span class="text-xs text-slate-500">2 min ago</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">Target</div>
+                                <div class="h-6 rounded" style="background-color: #4C7C54;"></div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">Your Mix</div>
+                                <div class="h-6 rounded" style="background-color: #5A8B62;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-3" data-mock="true">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-slate-700">Score: 72</span>
+                            <span class="text-xs text-slate-500">5 min ago</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">Target</div>
+                                <div class="h-6 rounded" style="background-color: #8B5A3C;"></div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">Your Mix</div>
+                                <div class="h-6 rounded" style="background-color: #A0654A;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 rounded-lg p-3" data-mock="true">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-slate-700">Score: 91</span>
+                            <span class="text-xs text-slate-500">8 min ago</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">Target</div>
+                                <div class="h-6 rounded" style="background-color: #2C5F41;"></div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">Your Mix</div>
+                                <div class="h-6 rounded" style="background-color: #2F6244;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Canvas Area -->
+        <div class="flex-1 flex flex-col bg-slate-100">
+            <!-- Canvas Header -->
+            <div class="bg-white border-b border-slate-200 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <h1 class="text-xl font-bold text-slate-800">Color Mix Challenge</h1>
+                        <div class="flex items-center space-x-2 text-sm text-slate-600">
+                            <span>Phase:</span>
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium" data-bind="gamePhase" data-mock="true">Painting</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-slate-600">
+                        <span>Total Paint:</span>
+                        <span class="font-medium" data-bind="totalAmount" data-mock="true">2.4 mL</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Canvas -->
+            <div class="flex-1 p-6">
+                <div class="canvas-container w-full h-full rounded-lg shadow-inner relative">
+                    <div class="brush-cursor" id="brushCursor" style="width: 32px; height: 32px; display: none;" data-mock="true"></div>
+                    <canvas 
+                        id="paintCanvas" 
+                        class="w-full h-full"
+                        width="800" 
+                        height="500"
+                        data-event="mousedown:startPainting|mousemove:paint|mouseup:stopPainting|touchstart:startPainting|touchmove:paint|touchend:stopPainting"
+                        data-mock="true">
+                    </canvas>
+                    
+                    <!-- Mixed Pile Overlay (shown after mixing) -->
+                    <div class="absolute inset-0 items-center justify-center hidden" id="mixedPileContainer" data-mock="true">
+                        <div class="mixed-pile w-32 h-32" style="background-color: #7A6B5A;" data-bind="mixedColor" data-mock="true"></div>
+                    </div>
+
+                    <!-- Results Overlay -->
+                    <div class="absolute inset-0 bg-black bg-opacity-50 items-center justify-center hidden" id="resultsOverlay" data-mock="true">
+                        <div class="bg-white rounded-lg p-8 max-w-md mx-4">
+                            <h3 class="text-xl font-bold text-slate-800 text-center mb-6">Color Match Result</h3>
+                            <div class="flex space-x-4 mb-6">
+                                <div class="flex-1 text-center">
+                                    <div class="text-sm text-slate-600 mb-2">Target</div>
+                                    <div class="w-full h-16 rounded-md shadow-inner" style="background-color: #8B5A3C;" data-mock="true"></div>
+                                </div>
+                                <div class="flex-1 text-center">
+                                    <div class="text-sm text-slate-600 mb-2">Your Mix</div>
+                                    <div class="w-full h-16 rounded-md shadow-inner" style="background-color: #9A6B4D;" data-mock="true"></div>
+                                </div>
+                            </div>
+                            <div class="text-center mb-6">
+                                <div class="text-4xl font-bold text-green-600 mb-2" data-bind="finalScore" data-mock="true">78</div>
+                                <div class="text-lg font-medium text-slate-700" data-bind="scoreVerdict" data-mock="true">Good Match!</div>
+                                <div class="text-sm text-slate-500">ΔE: <span data-bind="deltaE" data-mock="true">12.4</span></div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-4 rounded-md transition-colors duration-200" data-event="click:replayStrokes" data-mock="true">
+                                    Replay
+                                </button>
+                                <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200" data-event="click:tryAgain" data-mock="true">
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Tools & Pigments -->
+        <div class="w-1/4 bg-white border-l border-slate-200 flex flex-col">
+            <!-- Pigment Tubes -->
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Paint Tubes</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- @MAP: pigments.map(pigment => ( -->
+                    <button class="paint-tube pigment-titanium-white rounded-lg p-3 border border-slate-200 shadow-sm active" data-event="click:selectPigment" data-pigment-id="pw6" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Titanium White</div>
+                        <div class="text-xs text-slate-500 text-center">PW6</div>
+                    </button>
+                    <button class="paint-tube pigment-ivory-black rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pbk9" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Ivory Black</div>
+                        <div class="text-xs text-slate-500 text-center">PBk9</div>
+                    </button>
+                    <button class="paint-tube pigment-cadmium-yellow rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="py35" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Cadmium Yellow</div>
+                        <div class="text-xs text-slate-500 text-center">PY35</div>
+                    </button>
+                    <button class="paint-tube pigment-yellow-ochre rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="py43" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Yellow Ochre</div>
+                        <div class="text-xs text-slate-500 text-center">PY43</div>
+                    </button>
+                    <button class="paint-tube pigment-cadmium-red rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pr108" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Cadmium Red</div>
+                        <div class="text-xs text-slate-500 text-center">PR108</div>
+                    </button>
+                    <button class="paint-tube pigment-alizarin-crimson rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pr177" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Alizarin Crimson</div>
+                        <div class="text-xs text-slate-500 text-center">PR177</div>
+                    </button>
+                    <button class="paint-tube pigment-ultramarine-blue rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pb29" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Ultramarine Blue</div>
+                        <div class="text-xs text-slate-500 text-center">PB29</div>
+                    </button>
+                    <button class="paint-tube pigment-phthalo-blue rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pb15" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Phthalo Blue</div>
+                        <div class="text-xs text-slate-500 text-center">PB15:3</div>
+                    </button>
+                    <button class="paint-tube pigment-phthalo-green rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pg7" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Phthalo Green</div>
+                        <div class="text-xs text-slate-500 text-center">PG7</div>
+                    </button>
+                    <button class="paint-tube pigment-burnt-sienna rounded-lg p-3 border border-slate-200 shadow-sm" data-event="click:selectPigment" data-pigment-id="pbr7" data-mock="true">
+                        <div class="w-full h-8 rounded mb-2 shadow-inner"></div>
+                        <div class="text-xs font-medium text-slate-700 text-center">Burnt Sienna</div>
+                        <div class="text-xs text-slate-500 text-center">PBr7</div>
+                    </button>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+
+            <!-- Brush Controls -->
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Brush Settings</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Brush Size</label>
+                        <input 
+                            type="range" 
+                            id="brushSize" 
+                            min="4" 
+                            max="48" 
+                            value="16" 
+                            class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                            data-event="input:updateBrushSize"
+                            data-mock="true"
+                        >
+                        <div class="flex justify-between text-xs text-slate-500 mt-1">
+                            <span>Fine</span>
+                            <span class="font-medium" data-bind="brushSize" data-mock="true">16px</span>
+                            <span>Bold</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Selected Pigment</label>
+                        <div class="bg-slate-100 rounded-lg p-3 text-center">
+                            <div class="w-full h-6 pigment-titanium-white rounded mb-2 shadow-inner" data-bind="selectedPigment.color" data-mock="true"></div>
+                            <div class="text-sm font-medium text-slate-700" data-bind="selectedPigment.name" data-mock="true">Titanium White</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paint Amount Ledger -->
+            <div class="p-6 border-b border-slate-200 flex-1 overflow-y-auto">
+                <h2 class="text-lg font-semibold text-slate-800 mb-4">Paint Used</h2>
+                <div class="space-y-2 text-sm">
+                    <!-- @MAP: paintLedger.map(entry => ( -->
+                    <div class="flex items-center justify-between" data-mock="true">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 pigment-titanium-white rounded-full shadow-inner" data-mock="true"></div>
+                            <span class="text-slate-700" data-bind="entry.name" data-mock="true">Titanium White</span>
+                        </div>
+                        <span class="font-medium text-slate-600" data-bind="entry.amount" data-mock="true">0.8 mL</span>
+                    </div>
+                    <div class="flex items-center justify-between" data-mock="true">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 pigment-burnt-sienna rounded-full shadow-inner" data-mock="true"></div>
+                            <span class="text-slate-700" data-bind="entry.name" data-mock="true">Burnt Sienna</span>
+                        </div>
+                        <span class="font-medium text-slate-600" data-bind="entry.amount" data-mock="true">1.2 mL</span>
+                    </div>
+                    <div class="flex items-center justify-between" data-mock="true">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 pigment-yellow-ochre rounded-full shadow-inner" data-mock="true"></div>
+                            <span class="text-slate-700" data-bind="entry.name" data-mock="true">Yellow Ochre</span>
+                        </div>
+                        <span class="font-medium text-slate-600" data-bind="entry.amount" data-mock="true">0.4 mL</span>
+                    </div>
+                    <!-- @END_MAP )) -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="p-6 border-t border-slate-200">
+                <div class="space-y-3">
+                    <button class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded-md transition-colors duration-200 text-lg" data-event="click:mixPaints" data-mock="true">
+                        Mix Paint
+                    </button>
+                    <div class="flex space-x-2">
+                        <button class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-3 rounded-md transition-colors duration-200 text-sm" data-event="click:undoStroke" data-mock="true">
+                            Undo
+                        </button>
+                        <button class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium py-2 px-3 rounded-md transition-colors duration-200 text-sm" data-event="click:clearCanvas" data-mock="true">
+                            Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TODO: Implement business logic, API calls, or state management
+        
+        (function() {
+            // Mock interactive behavior for demonstration
+            let selectedPigment = 'pw6';
+            let brushSize = 16;
+            let isPainting = false;
+            
+            // Canvas setup
+            const canvas = document.getElementById('paintCanvas');
+            const ctx = canvas.getContext('2d');
+            const brushCursor = document.getElementById('brushCursor');
+            
+            // Paint tube selection
+            document.querySelectorAll('.paint-tube').forEach(tube => {
+                tube.addEventListener('click', function() {
+                    // Remove active class from all tubes
+                    document.querySelectorAll('.paint-tube').forEach(t => t.classList.remove('active'));
+                    // Add active class to clicked tube
+                    this.classList.add('active');
+                    selectedPigment = this.dataset.pigmentId;
+                });
+            });
+            
+            // Brush size control
+            const brushSizeSlider = document.getElementById('brushSize');
+            brushSizeSlider.addEventListener('input', function() {
+                brushSize = parseInt(this.value);
+                document.querySelector('[data-bind="brushSize"]').textContent = `${brushSize}px`;
+                brushCursor.style.width = `${brushSize}px`;
+                brushCursor.style.height = `${brushSize}px`;
+            });
+            
+            // Canvas painting simulation
+            canvas.addEventListener('mouseenter', function() {
+                brushCursor.style.display = 'block';
+            });
+            
+            canvas.addEventListener('mouseleave', function() {
+                brushCursor.style.display = 'none';
+            });
+            
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                brushCursor.style.left = `${x - brushSize/2}px`;
+                brushCursor.style.top = `${y - brushSize/2}px`;
+                
+                if (isPainting) {
+                    // Simulate painting stroke
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = getPigmentColor(selectedPigment);
+                    ctx.beginPath();
+                    ctx.arc(x, y, brushSize/2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+            
+            canvas.addEventListener('mousedown', function() {
+                isPainting = true;
+            });
+            
+            canvas.addEventListener('mouseup', function() {
+                isPainting = false;
+            });
+            
+            // Mix paint button
+            document.querySelector('[data-event="click:mixPaints"]').addEventListener('click', function() {
+                // Simulate mixing animation
+                canvas.style.opacity = '0.3';
+                document.getElementById('mixedPileContainer').classList.remove('hidden');
+                document.getElementById('mixedPileContainer').classList.add('flex');
+                
+                // Show results after delay
+                setTimeout(() => {
+                    document.getElementById('resultsOverlay').classList.remove('hidden');
+                    document.getElementById('resultsOverlay').classList.add('flex');
+                }, 1500);
+            });
+            
+            // Clear canvas
+            document.querySelector('[data-event="click:clearCanvas"]').addEventListener('click', function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.style.opacity = '1';
+                document.getElementById('mixedPileContainer').classList.add('hidden');
+                document.getElementById('mixedPileContainer').classList.remove('flex');
+            });
+            
+            // Close results overlay
+            document.querySelector('[data-event="click:tryAgain"]').addEventListener('click', function() {
+                document.getElementById('resultsOverlay').classList.add('hidden');
+                document.getElementById('resultsOverlay').classList.remove('flex');
+                document.querySelector('[data-event="click:clearCanvas"]').click();
+            });
+            
+            function getPigmentColor(pigmentId) {
+                const colors = {
+                    'pw6': '#F2F2F2',
+                    'pbk9': '#1C1C1C',
+                    'py35': '#F6C700',
+                    'py43': '#C49A2C',
+                    'pr108': '#D02A2A',
+                    'pr177': '#8E1F2E',
+                    'pb29': '#2C3FA3',
+                    'pb15': '#0C4DA2',
+                    'pg7': '#0C8A6D',
+                    'pbr7': '#7A3B1C'
+                };
+                return colors[pigmentId] || '#000000';
+            }
+        })();
+    </script>
+</body>
+</html>

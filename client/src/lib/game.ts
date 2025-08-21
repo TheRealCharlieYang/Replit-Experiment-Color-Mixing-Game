@@ -1,93 +1,77 @@
 import type { GameState, Pigment, RGB, SessionStats, MatchResult, MatchHistory } from "@shared/schema";
 import { rgbToOKLab, mixColorsOKLab, okLabToRgb, calculateColorScore, rgbToHex, hexToRgb } from "./color";
 import { nanoid } from "nanoid";
+import { EXPANDED_PIGMENTS } from "./expanded-pigments";
 
-// Default pigments with direct OKLab values to avoid conversion drift
-export const DEFAULT_PIGMENTS: Pigment[] = [
-  {
-    id: "pw6",
-    name: "Titanium White",
-    code: "PW6",
-    swatchHex: "#F2F2F2",
-    colorant: { L: 0.96, a: 0.00, b: 0.00 }, // Pure white in OKLab
-  },
-  {
-    id: "pbk9", 
-    name: "Ivory Black",
-    code: "PBk9",
-    swatchHex: "#1C1C1C",
-    colorant: { L: 0.15, a: 0.00, b: 0.00 }, // Pure black in OKLab
-  },
-  {
-    id: "py35",
-    name: "Cadmium Yellow", 
-    code: "PY35",
-    swatchHex: "#FFD200",
-    colorant: { L: 0.88, a: 0.02, b: 0.18 }, // Bright yellow
-  },
-  {
-    id: "py43",
-    name: "Yellow Ochre",
-    code: "PY43", 
-    swatchHex: "#C6862B",
-    colorant: { L: 0.62, a: 0.05, b: 0.12 }, // Earthy yellow
-  },
-  {
-    id: "pr108",
-    name: "Cadmium Red",
-    code: "PR108",
-    swatchHex: "#E03C31", 
-    colorant: { L: 0.55, a: 0.22, b: 0.14 }, // Bright red
-  },
-  {
-    id: "pr177",
-    name: "Alizarin Crimson",
-    code: "PR177",
-    swatchHex: "#8A2232",
-    colorant: { L: 0.32, a: 0.18, b: 0.08 }, // Deep crimson
-  },
-  {
-    id: "pb29",
-    name: "Ultramarine Blue",
-    code: "PB29", 
-    swatchHex: "#3F4BA0",
-    colorant: { L: 0.42, a: 0.08, b: -0.25 }, // Classic blue
-  },
-  {
-    id: "pb15",
-    name: "Phthalo Blue",
-    code: "PB15",
-    swatchHex: "#0F4C81",
-    colorant: { L: 0.35, a: -0.02, b: -0.22 }, // Deep blue
-  },
-  {
-    id: "pg7", 
-    name: "Phthalo Green",
-    code: "PG7",
-    swatchHex: "#00836C",
-    colorant: { L: 0.48, a: -0.15, b: 0.05 }, // Blue-green
-  },
-  {
-    id: "pbr7",
-    name: "Burnt Sienna", 
-    code: "PBr7",
-    swatchHex: "#8A3B12",
-    colorant: { L: 0.35, a: 0.12, b: 0.08 }, // Rich brown
-  },
-];
+// Use the expanded pigment palette
+export const DEFAULT_PIGMENTS: Pigment[] = EXPANDED_PIGMENTS;
 
-// Predefined target colors with names
+// Expanded target colors for more challenging mixing scenarios
 const TARGET_COLORS = [
+  // Earth Tones
   { name: "Burnt Sienna Tint", rgb: { r: 139, g: 90, b: 60 } },
-  { name: "Sage Green", rgb: { r: 155, g: 173, b: 157 } },
-  { name: "Dusty Rose", rgb: { r: 188, g: 143, b: 143 } },
-  { name: "Warm Gray", rgb: { r: 128, g: 118, b: 105 } },
-  { name: "Muted Purple", rgb: { r: 108, g: 91, b: 123 } },
-  { name: "Olive Drab", rgb: { r: 107, g: 142, b: 35 } },
-  { name: "Coral Pink", rgb: { r: 255, g: 127, b: 80 } },
-  { name: "Steel Blue", rgb: { r: 70, g: 130, b: 180 } },
+  { name: "Raw Umber Shadow", rgb: { r: 89, g: 67, b: 52 } },
   { name: "Terracotta", rgb: { r: 204, g: 78, b: 92 } },
+  { name: "Warm Ochre", rgb: { r: 183, g: 142, b: 89 } },
+  { name: "Sienna Rose", rgb: { r: 156, g: 102, b: 89 } },
+  
+  // Greens
+  { name: "Sage Green", rgb: { r: 155, g: 173, b: 157 } },
   { name: "Forest Shadow", rgb: { r: 85, g: 107, b: 47 } },
+  { name: "Olive Drab", rgb: { r: 107, g: 142, b: 35 } },
+  { name: "Viridian Tint", rgb: { r: 102, g: 156, b: 139 } },
+  { name: "Spring Moss", rgb: { r: 134, g: 168, b: 102 } },
+  { name: "Pine Shadow", rgb: { r: 67, g: 89, b: 72 } },
+  
+  // Blues
+  { name: "Steel Blue", rgb: { r: 70, g: 130, b: 180 } },
+  { name: "Prussian Tint", rgb: { r: 89, g: 134, b: 156 } },
+  { name: "Cerulean Gray", rgb: { r: 112, g: 145, b: 167 } },
+  { name: "Cobalt Shadow", rgb: { r: 67, g: 89, b: 134 } },
+  { name: "Twilight Blue", rgb: { r: 89, g: 102, b: 145 } },
+  
+  // Purples and Violets
+  { name: "Muted Purple", rgb: { r: 108, g: 91, b: 123 } },
+  { name: "Lavender Gray", rgb: { r: 145, g: 134, b: 156 } },
+  { name: "Violet Shadow", rgb: { r: 89, g: 72, b: 102 } },
+  { name: "Mauve Mist", rgb: { r: 167, g: 145, b: 178 } },
+  
+  // Warm Colors
+  { name: "Coral Pink", rgb: { r: 255, g: 127, b: 80 } },
+  { name: "Dusty Rose", rgb: { r: 188, g: 143, b: 143 } },
+  { name: "Peach Shadow", rgb: { r: 201, g: 156, b: 134 } },
+  { name: "Salmon Tint", rgb: { r: 223, g: 167, b: 145 } },
+  { name: "Venetian Rose", rgb: { r: 178, g: 123, b: 112 } },
+  
+  // Neutrals and Grays
+  { name: "Warm Gray", rgb: { r: 128, g: 118, b: 105 } },
+  { name: "Cool Gray", rgb: { r: 112, g: 123, b: 134 } },
+  { name: "Payne's Tint", rgb: { r: 134, g: 145, b: 156 } },
+  { name: "Charcoal Warm", rgb: { r: 89, g: 85, b: 78 } },
+  { name: "Pearl Gray", rgb: { r: 167, g: 167, b: 162 } },
+  
+  // Complex Mixes
+  { name: "Autumn Leaf", rgb: { r: 178, g: 134, b: 89 } },
+  { name: "Desert Sand", rgb: { r: 201, g: 178, b: 134 } },
+  { name: "Storm Cloud", rgb: { r: 102, g: 112, b: 123 } },
+  { name: "Weathered Copper", rgb: { r: 134, g: 112, b: 89 } },
+  { name: "Moonstone", rgb: { r: 156, g: 162, b: 167 } },
+  { name: "Driftwood", rgb: { r: 145, g: 134, b: 123 } },
+  { name: "Sea Foam", rgb: { r: 145, g: 167, b: 156 } },
+  { name: "Canyon Red", rgb: { r: 167, g: 102, b: 89 } },
+  { name: "Misty Morning", rgb: { r: 178, g: 183, b: 178 } },
+  { name: "Golden Hour", rgb: { r: 201, g: 167, b: 112 } },
+  { name: "Twilight Mist", rgb: { r: 134, g: 134, b: 145 } },
+  { name: "Copper Patina", rgb: { r: 112, g: 134, b: 123 } },
+  { name: "Dusty Lavender", rgb: { r: 156, g: 145, b: 162 } },
+  { name: "Sage Shadow", rgb: { r: 123, g: 134, b: 123 } },
+  { name: "Warm Stone", rgb: { r: 162, g: 156, b: 145 } },
+  { name: "Cool Stone", rgb: { r: 145, g: 150, b: 156 } },
+  { name: "Antique Gold", rgb: { r: 183, g: 167, b: 134 } },
+  { name: "Faded Rose", rgb: { r: 167, g: 134, b: 145 } },
+  { name: "Moss Stone", rgb: { r: 134, g: 145, b: 134 } },
+  { name: "Pewter", rgb: { r: 145, g: 145, b: 150 } },
+  { name: "Sandstone", rgb: { r: 178, g: 162, b: 145 } }
 ];
 
 export function createInitialGameState(): GameState {
