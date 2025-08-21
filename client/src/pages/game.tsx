@@ -24,6 +24,7 @@ export default function GamePage() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
   const [fireworksSpecial, setFireworksSpecial] = useState(false);
+  const [permanentRoseTriggered, setPermanentRoseTriggered] = useState(false);
 
   // Trigger fireworks when score exceeds 90 or when Permanent Rose appears
   useEffect(() => {
@@ -33,7 +34,8 @@ export default function GamePage() {
       setTimeout(() => setShowFireworks(false), 3000);
     }
     
-    if (gameState.targetName === "Permanent Rose") {
+    if (gameState.targetName === "Permanent Rose" && !permanentRoseTriggered) {
+      setPermanentRoseTriggered(true);
       setFireworksSpecial(true);
       setShowFireworks(true);
       // Auto-hide special fireworks after 5 seconds
@@ -42,7 +44,7 @@ export default function GamePage() {
         setFireworksSpecial(false);
       }, 5000);
     }
-  }, [gameState.score, gameState.targetName]);
+  }, [gameState.score, gameState.targetName, permanentRoseTriggered]);
 
   const handleMixColors = () => {
     mix();
