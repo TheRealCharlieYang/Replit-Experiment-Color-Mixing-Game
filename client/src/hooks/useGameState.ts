@@ -70,6 +70,7 @@ export function useGameState() {
       ...clearGameCanvas(current),
       target: target.rgb,
       targetName: target.name,
+      targetNote: target.note,
     }));
   }, []);
 

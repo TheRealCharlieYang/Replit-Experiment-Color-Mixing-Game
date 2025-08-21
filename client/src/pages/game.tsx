@@ -46,6 +46,7 @@ export default function GamePage() {
       <TargetPanel
         target={gameState.target}
         targetName={gameState.targetName}
+        targetNote={gameState.targetNote}
         currentScore={gameState.score}
         sessionStats={sessionStats}
         onGenerateNewTarget={generateNewTarget}

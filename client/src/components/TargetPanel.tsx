@@ -7,6 +7,7 @@ import { Palette, RotateCcw, Lightbulb } from "lucide-react";
 interface TargetPanelProps {
   target: RGB;
   targetName: string;
+  targetNote?: string;
   currentScore: number | null;
   sessionStats: SessionStats;
   onGenerateNewTarget: () => void;
@@ -16,6 +17,7 @@ interface TargetPanelProps {
 export function TargetPanel({
   target,
   targetName,
+  targetNote,
   currentScore,
   sessionStats,
   onGenerateNewTarget,
@@ -59,6 +61,11 @@ export function TargetPanel({
               <p className="text-xs text-warm-gray-500 font-mono" data-testid="target-hex">
                 {targetHex}
               </p>
+              {targetNote && (
+                <p className="text-xs text-warm-gray-600 italic mt-2 leading-relaxed" data-testid="target-note">
+                  {targetNote}
+                </p>
+              )}
             </div>
           </div>
 

@@ -49,6 +49,7 @@ export const StrokeSchema = z.object({
 export const GameStateSchema = z.object({
   target: RGBSchema,
   targetName: z.string(),
+  targetNote: z.string().optional(),
   strokes: z.array(StrokeSchema),
   amounts: z.record(z.string(), z.number()),
   totalAmount: z.number(),
