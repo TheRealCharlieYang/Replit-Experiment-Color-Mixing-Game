@@ -80,8 +80,8 @@ export function Fireworks({ trigger, onComplete, isSpecial = false }: FireworksP
   if (!trigger || particles.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {particles.map(particle => (
+    <div className="fixed inset-0 pointer-events-none z-[9999]">
+      {particles.map((particle) => (
         <div
           key={particle.id}
           className="absolute w-2 h-2 rounded-full"
@@ -98,7 +98,7 @@ export function Fireworks({ trigger, onComplete, isSpecial = false }: FireworksP
       {isSpecial && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-4xl font-bold text-pink-500 animate-pulse">
-            💖 For Jenny 💖
+            💖 
           </div>
         </div>
       )}
